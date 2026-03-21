@@ -1,0 +1,16 @@
+id: generate_data
+namespace: sport.benefits
+
+tasks:
+  - id: generate_hr
+    type: io.kestra.plugin.scripts.python.Script
+    script: |
+      from src.data_generation.generate_hr import generate_hr
+      generate_hr()
+
+  - id: generate_sport
+    type: io.kestra.plugin.scripts.python.Script
+    script: |
+      from src.data_generation.generate_sport import generate_sport
+      generate_sport()
+

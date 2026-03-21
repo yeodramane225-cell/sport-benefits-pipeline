@@ -1,0 +1,10 @@
+id: notify_slack
+namespace: sport.benefits
+
+tasks:
+  - id: notify
+    type: io.kestra.plugin.scripts.python.Script
+    script: |
+      from src.notifications.slack import notify_new_activities
+      notify_new_activities()
+

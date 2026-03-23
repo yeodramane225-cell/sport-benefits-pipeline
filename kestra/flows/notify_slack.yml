@@ -1,0 +1,10 @@
+id: notify_slack
+namespace: sport.benefits
+
+tasks:
+  - id: send_slack
+    type: io.kestra.plugin.scripts.python.Script
+    script: |
+      from src.notifications.slack import send_slack_message
+      send_slack_message(" Pipeline exécuté avec succès ! Les données sont prêtes dans Postgres.")
+

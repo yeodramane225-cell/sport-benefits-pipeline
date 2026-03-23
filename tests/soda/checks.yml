@@ -1,0 +1,15 @@
+checks:
+  - name: "Distances non négatives"
+    column: distance_km
+    valid_min: 0
+
+  - name: "Dates valides"
+    column: date
+    valid_format: "%Y-%m-%d"
+
+  - name: "Aucune valeur manquante"
+    columns:
+      - employee_id
+      - distance_km
+      - date
+    missing_count: 0

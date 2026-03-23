@@ -1,13 +1,14 @@
-version: "3.9"
-
 services:
   kestra:
-    image: kestra/kestra:latest
+    image: kestra/kestra:latest-full
     container_name: kestra
+    command: server standalone --config /app/config.yml
     ports:
       - "8080:8080"
     volumes:
-      - ./kestra:/etc/kestra
+      - ./kestra/config.yml:/app/config.yml
+      - ./kestra/flows:/app/flows
+      - ./kestra/storage:/app/storage
     depends_on:
       - postgres
       - minio

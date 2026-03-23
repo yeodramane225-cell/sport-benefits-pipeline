@@ -1,0 +1,23 @@
+kestra:
+  server:
+    basic-auth:
+      enabled: false
+
+  repository:
+    type: postgres
+
+  queue:
+    type: postgres
+
+  storage:
+    type: local
+    local:
+      base-path: /app/storage
+
+datasources:
+  postgres:
+    url: jdbc:postgresql://postgres:5432/sportdb
+    driverClassName: org.postgresql.Driver
+    username: kestra
+    password: kestra
+

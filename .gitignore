@@ -1,0 +1,59 @@
+# --- ENVIRONNEMENT ---
+.env
+*.env
+.env.*
+
+# --- PYTHON ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+
+# --- NOTEBOOKS ---
+.ipynb_checkpoints/
+
+# --- LOGS ---
+logs/
+*.log
+
+# --- CACHE ---
+.cache/
+*.cache
+
+# --- DATA (ne jamais versionner les données) ---
+data/
+raw/
+processed/
+curated/
+*.csv
+*.parquet
+*.xlsx
+
+# --- KESTRA ---
+kestra/storage/
+kestra/.kestra/
+kestra/logs/
+
+# --- DOCKER ---
+docker-compose.override.yml
+*.pid
+
+# --- MINIO ---
+minio_data/
+
+# --- POSTGRES ---
+postgres_data/
+*.sql
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+

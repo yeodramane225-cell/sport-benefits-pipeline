@@ -1,0 +1,11 @@
+flowchart LR
+    A1["1. Sources de donnees - RH.xlsx + Sportive.xlsx"] -->|Test 1 OK| A2["2. Generation Faker - hr_generated.csv + sport_generated.csv"]
+    A2 -->|Test 2 OK| A3["3. Stockage MinIO - brut"]
+    A3 -->|Test 3 OK| A4["4. Configuration centrale - settings.py"]
+    A4 -->|Test 4 OK| A5["5. Regles metier - prime, jours de bien-etre, coherence"]
+    A5 -->|Test 5 OK| A6["6. Transformation - fusion, nettoyage, enrichissement"]
+    A6 -->|Test 6 OK| A7["7. Stockage MinIO - traite"]
+    A7 -->|Test 7 OK| A8["8. Chargement Postgres - sport_benefits"]
+    A8 -->|Test 8 OK| A9["9. Publication Slack - send_slack_message"]
+    A9 -->|Test 9 OK| A10["10. Orchestration Kestra - flows, monitoring, alertes Slack"]
+    A10 -->|Test 10 OK| A11{"11. Scalabilite - partie theorique"}

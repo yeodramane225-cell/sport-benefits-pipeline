@@ -1,0 +1,14 @@
+flowchart LR
+    A1["Source RH - RH.xlsx"] --> B["Generation Faker"]
+    A2["Source Sport - Sportive.xlsx"] --> B
+    B --> C["MinIO raw"]
+    C --> D["Transformation"]
+    E["settings.py"] -.-> D
+    F["Regles metier"] -.-> D
+    D --> G["MinIO processed"]
+    G --> H[("PostgreSQL sport_benefits")]
+    H --> I["Slack notification"]
+    J["Kestra orchestration"] -.-> B
+    J -.-> D
+    J -.-> I
+    J -.-> K{"Scalabilite"}

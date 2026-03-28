@@ -9,6 +9,7 @@ services:
       - ./kestra/config.yml:/app/config.yml
       - ./kestra/flows:/app/flows
       - ./kestra/storage:/app/storage
+      - ./:/app/project
     depends_on:
       - postgres
       - minio
@@ -49,4 +50,3 @@ services:
 volumes:
   postgres_data:
   minio_data:
-

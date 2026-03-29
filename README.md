@@ -1,5 +1,4 @@
 
----
 
 ## Installation du projet
 

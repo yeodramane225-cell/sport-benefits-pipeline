@@ -118,31 +118,57 @@ commits réguliers et explicites
 historique propre (rebase)
 documentation versionnée
 
-GitHub garantit la traçabilité et la reproductibilité du projet.
+gitHub garantit la traçabilité et la reproductibilité du projet.
 
-## Scalabilité
-## Architecture scalable
-MinIO distribué
-Kestra en cluster
-PostgreSQL managé (RDS, Cloud SQL)
-Python scalable (Spark, Dask, Ray)
-## Montée en charge
-séparation des couches de données
-stockage objet extensible
-orchestration distribuée
-base optimisée pour l’analytique
-## Coûts
-environnement local (self-hosted) : coût minimal
-environnement cloud : dépend du stockage, du compute et des services managés
-## Migration cloud
+## Scalabilité de la plateforme
+Introduction
 
-L’architecture est conçue pour évoluer facilement :
+Cette section décrit les mécanismes de scalabilité de la plateforme de données.
+Bien que ces éléments ne soient pas implémentés dans le POC, ils permettent d’anticiper une mise en production pour gérer une montée en charge.
 
-passage de Docker local à Kubernetes
-migration vers des services cloud managés
-intégration dans une plateforme data moderne
+## Lecture de l’architecture
+Kestra Server : interface, API et scheduler centralisés.
+Executors : exécution parallèle des flows.
+MinIO : cluster distribué pour éviter le point de panne unique.
+PostgreSQL : séparation en primaire (écritures) et replicas (lectures BI).
+Slack : alertes d’exécution et d’échec.
+Prometheus + Grafana : supervision technique.
+
+## Objectifs de scalabilité
+Assurer la montée en charge : plus d’employés, activités et fichiers.
+Garantir la disponibilité : éviter qu’un seul serveur Kestra/Postgres/MinIO soit un point de panne.
+Maîtriser les coûts : dimensionner selon le volume réel.
+
+## Architecture cible “scalable”
+Kestra : 1 nœud server + N executors (Docker Swarm / Kubernetes).
+MinIO : cluster distribué (4+ nœuds) avec erasure coding pour tolérance aux pannes.
+PostgreSQL : 1 primaire + réplicas avec failover automatique.
+Infrastructure : isolation des rôles (on-premise ou cloud), autoscaling possible.
+Supervision : dashboards Kestra, Prometheus/Grafana, alertes Slack.
+
+## Approche par étapes
+Séparer les rôles : VM/conteneur dédié pour Kestra, MinIO et Postgres.
+Haute disponibilité : réplication Postgres, cluster MinIO, Kestra server + executors.
+Industrialiser le déploiement : Docker Compose (dev), Swarm/K8s (prod), limites CPU/RAM.
+Suivi des indicateurs : stockage MinIO, temps d’exécution des flows, performances DB.
+
+## Estimation des coûts
+
+
+## Coût de la scalabilité
+
+| Composant                | Besoin pour la scalabilité                         | Ressources nécessaires                              | Coût estimé (€/mois) | Commentaires                          |
+|-------------------------|---------------------------------------------------|----------------------------------------------------|----------------------|--------------------------------------|
+| Kestra – Server         | Nœud central (UI, API, scheduler)                 | 2 vCPU, 4 Go RAM                                   | 20–40 €              | Charge faible                        |
+| Kestra – Executors      | Exécution parallèle des flows                     | 2–4 vCPU + 4–8 Go RAM par executor                 | 40–160 €             | Coût variable selon la charge        |
+| MinIO – Cluster distribué | Stockage scalable + tolérance aux pannes        | 4 nœuds × (2 vCPU, 4 Go RAM, 200 Go disque)        | 80–200 €             | Poste principal du coût              |
+| PostgreSQL – HA         | Haute disponibilité + réplication                 | 2 nœuds × (2 vCPU, 4 Go RAM, 100 Go disque)        | 60–120 €             | Réplica utilisé pour BI              |
+| Stockage additionnel    | Historique + rétention 12 mois                    | +500 Go                                            | 20–50 €              | Dépend du volume                     |
+| Réseau interne          | Communication Kestra ↔ MinIO ↔ Postgres           | 1–2 To/mois                                        | 10–30 €              | Dépend du trafic                     |
+| Observabilité           | Prometheus + Grafana                              | 1 vCPU, 2 Go RAM                                   | 10–15 €              | Open source                          |
+| Slack                   | Webhook + canal dédié                             | —                                                  | 0 €                  | Slack gratuit                        |
+| Support / maintenance   | Optionnel                                         | —                                                  | 0–200 €              | Selon support entreprise             |
+
 ## Conclusion
 
-Ce projet démontre la mise en œuvre d’un pipeline data complet, modulaire et industrialisable.
-
-Il constitue une base solide pour un déploiement en production dans un environnement scalable, avec un haut niveau de qualité, de test et de maintenabilité.
+Cette architecture scalable permet de garantir la performance, la disponibilité et la résilience du pipeline, facilitant la montée en charge et une transition vers une production robuste.

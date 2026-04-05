@@ -1,0 +1,118 @@
+id: load_curated_to_postgres
+namespace: sport.benefits
+
+tasks:
+  - id: log_start
+    type: io.kestra.plugin.core.log.Log
+    message: "Démarrage du flow load_curated_to_postgres"
+
+  - id: transform
+    type: io.kestra.plugin.scripts.python.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install pandas boto3
+    commands:
+      - |
+        set -e
+
+        WORKDIR=$(pwd)
+
+        export S3_ENDPOINT=http://minio:9000
+        export S3_ACCESS_KEY=admin
+        export S3_SECRET_KEY=admin123
+        export S3_BUCKET_RAW=raw
+
+        echo "Début de la transformation..."
+        cd /app/project
+        python3 -u transform.py
+
+        cp /tmp/processed.csv "$WORKDIR/processed.csv"
+        cp /tmp/sport_benefits_curated.csv "$WORKDIR/sport_benefits_curated.csv"
+
+        echo "Files in Kestra working dir:"
+        ls -la "$WORKDIR"
+
+        echo "Preview curated CSV:"
+        head -n 5 "$WORKDIR/sport_benefits_curated.csv"
+    outputFiles:
+      - processed.csv
+      - sport_benefits_curated.csv
+
+  - id: log_after_transform
+    type: io.kestra.plugin.core.log.Log
+    message: |
+      Transformation terminée.
+      Fichier processed.csv: {{ outputs.transform.outputFiles['processed.csv'] }}
+      Fichier sport_benefits_curated.csv: {{ outputs.transform.outputFiles['sport_benefits_curated.csv'] }}
+
+  - id: upload_processed
+    type: io.kestra.plugin.minio.Upload
+    endpoint: http://minio:9000
+    accessKeyId: admin
+    secretKeyId: admin123
+    region: us-east-1
+    bucket: processed
+    key: processed.csv
+    from: "{{ outputs.transform.outputFiles['processed.csv'] }}"
+
+  - id: log_after_upload_processed
+    type: io.kestra.plugin.core.log.Log
+    message: "Upload du fichier processed.csv terminé dans le bucket MinIO 'processed'"
+
+  - id: upload_curated
+    type: io.kestra.plugin.minio.Upload
+    endpoint: http://minio:9000
+    accessKeyId: admin
+    secretKeyId: admin123
+    region: us-east-1
+    bucket: curated
+    key: sport_benefits_curated.csv
+    from: "{{ outputs.transform.outputFiles['sport_benefits_curated.csv'] }}"
+
+  - id: log_after_upload_curated
+    type: io.kestra.plugin.core.log.Log
+    message: "Upload du fichier sport_benefits_curated.csv terminé dans le bucket MinIO 'curated'"
+
+  - id: create_table
+    type: io.kestra.plugin.jdbc.postgresql.Query
+    url: jdbc:postgresql://postgres:5432/sportdb
+    username: kestra
+    password: kestra
+    sql: |
+      DROP TABLE IF EXISTS sport_benefits_curated;
+
+      CREATE TABLE sport_benefits_curated (
+          employee_id INTEGER,
+          activite_label TEXT,
+          activite_sportive INTEGER,
+          activite_detail TEXT,
+          duree_totale_min INTEGER,
+          nom TEXT,
+          prenom TEXT,
+          date_embauche DATE,
+          anciennete INTEGER,
+          departement TEXT,
+          distance_km DOUBLE PRECISION,
+          prime INTEGER,
+          jours_bien_etre INTEGER
+      );
+
+  - id: log_after_create_table
+    type: io.kestra.plugin.core.log.Log
+    message: "Table PostgreSQL sport_benefits_curated créée avec succès"
+
+  - id: load_to_postgres
+    type: io.kestra.plugin.jdbc.postgresql.CopyIn
+    url: jdbc:postgresql://postgres:5432/sportdb
+    username: kestra
+    password: kestra
+    from: "{{ outputs.transform.outputFiles['sport_benefits_curated.csv'] }}"
+    table: sport_benefits_curated
+    format: CSV
+    header: true
+    delimiter: ","
+
+  - id: log_end
+    type: io.kestra.plugin.core.log.Log
+    message: "Chargement dans PostgreSQL terminé avec succès"

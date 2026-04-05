@@ -1,0 +1,16 @@
+id: process_data
+namespace: sport.benefits
+
+tasks:
+  - id: transform
+    type: io.kestra.plugin.scripts.python.Script
+    script: |
+      from src.processing.transform import run_transform
+      run_transform()
+
+  - id: load_postgres
+    type: io.kestra.plugin.scripts.python.Script
+    script: |
+      from src.io.postgres_utils import load_to_postgres
+      load_to_postgres()
+

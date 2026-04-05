@@ -1,0 +1,19 @@
+id: failure_alert
+namespace: sportdata.monitoring
+
+tasks:
+  - id: notify_slack
+    type: io.kestra.plugin.notifications.slack.SlackExecution
+    url: "{{ secret('SLACK_WEBHOOK_URL') }}"
+    executionId: "{{ trigger.executionId ?? execution.id }}"
+
+triggers:
+  - id: on_failed_execution
+    type: io.kestra.plugin.core.trigger.Flow
+    conditions:
+      - type: io.kestra.plugin.core.condition.ExecutionStatus
+        in:
+          - FAILED
+      - type: io.kestra.plugin.core.condition.ExecutionNamespace
+        namespace: company.team
+        prefix: false

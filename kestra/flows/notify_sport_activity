@@ -1,0 +1,123 @@
+id: notify_sport_activity
+namespace: sport.benefits
+
+inputs:
+  - id: file_key
+    type: STRING
+    required: false
+    defaults: "sport_benefits_curated.csv"
+
+tasks:
+  - id: log_start
+    type: io.kestra.plugin.core.log.Log
+    message: "Détection d'un nouveau fichier sportif dans MinIO."
+
+  - id: notify_slack
+    type: io.kestra.plugin.scripts.python.Commands
+    taskRunner:
+      type: io.kestra.plugin.core.runner.Process
+    beforeCommands:
+      - pip install pandas boto3 requests
+    env:
+      MINIO_ENDPOINT: "http://minio:9000"
+      MINIO_ACCESS_KEY: "{{ secret('MINIO_ACCESS_KEY') }}"
+      MINIO_SECRET_KEY: "{{ secret('MINIO_SECRET_KEY') }}"
+      MINIO_BUCKET: "curated"
+      SLACK_WEBHOOK_URL: "{{ secret('SLACK_WEBHOOK_URL') }}"
+      FILE_KEY: "{{ inputs.file_key ?? '' }}"
+      TRIGGER_OBJECTS: "{{ trigger.objects ?? '[]' }}"
+      KESTRA_EXECUTION_ID: "{{ trigger.executionId ?? execution.id }}"
+    commands:
+      - |
+        python3 - <<'PY'
+        import os
+        import json
+        import boto3
+        import pandas as pd
+        import requests
+
+        endpoint = os.environ["MINIO_ENDPOINT"]
+        access_key = os.environ["MINIO_ACCESS_KEY"]
+        secret_key = os.environ["MINIO_SECRET_KEY"]
+        bucket = os.environ["MINIO_BUCKET"]
+        webhook_url = os.environ["SLACK_WEBHOOK_URL"]
+        execution_id = os.environ["KESTRA_EXECUTION_ID"]
+        manual_file_key = os.environ.get("FILE_KEY", "").strip()
+
+        raw_trigger_objects = os.environ.get("TRIGGER_OBJECTS", "[]")
+        try:
+            trigger_objects = json.loads(raw_trigger_objects)
+        except json.JSONDecodeError:
+            trigger_objects = []
+
+        if trigger_objects and isinstance(trigger_objects, list) and "key" in trigger_objects[0]:
+            key = trigger_objects[0]["key"]
+        elif manual_file_key:
+            key = manual_file_key
+        else:
+            raise ValueError(
+                "Aucun fichier disponible. Lancez le flow via le trigger MinIO "
+                "ou fournissez l'input 'file_key' pour un test manuel."
+            )
+
+        s3 = boto3.client(
+            "s3",
+            endpoint_url=endpoint,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key
+        )
+
+        obj = s3.get_object(Bucket=bucket, Key=key)
+        df = pd.read_csv(obj["Body"])
+
+        if df.empty:
+            text = (
+                f"Fichier détecté mais vide : {key}\n"
+                f"Execution Kestra : {execution_id}"
+            )
+        else:
+            row = df.iloc[0]
+            employee_id = row.get("employee_id", row.get("employ_id", "N/A"))
+            nom = row.get("nom", "N/A")
+            prenom = row.get("prenom", "N/A")
+            activite = row.get("activite_detail", "N/A")
+            date_activite = row.get("activite_label", "N/A")
+            duree = row.get("duree_totale_min", "N/A")
+            departement = row.get("departement", "N/A")
+            prime = row.get("prime", "N/A")
+            jours_bien_etre = row.get("jours_bien_etre", "N/A")
+
+            text = (
+                "Nouvelle activité sportive détectée\n"
+                f"Fichier : {key}\n"
+                f"Employé ID : {employee_id}\n"
+                f"Nom : {prenom} {nom}\n"
+                f"Activité : {activite}\n"
+                f"Date activité : {date_activite}\n"
+                f"Durée totale : {duree} min\n"
+                f"Département : {departement}\n"
+                f"Prime : {prime}\n"
+                f"Jours bien-être : {jours_bien_etre}\n"
+                f"Execution Kestra : {execution_id}"
+            )
+
+        response = requests.post(webhook_url, json={"text": text}, timeout=30)
+        response.raise_for_status()
+
+        print("Notification Slack envoyée avec succès.")
+        PY
+
+  - id: log_end
+    type: io.kestra.plugin.core.log.Log
+    message: "Notification Slack envoyée."
+
+triggers:
+  - id: new_curated_file
+    type: io.kestra.plugin.minio.Trigger
+    interval: PT1M
+    endpoint: "http://minio:9000"
+    accessKeyId: "{{ secret('MINIO_ACCESS_KEY') }}"
+    secretKeyId: "{{ secret('MINIO_SECRET_KEY') }}"
+    bucket: "curated"
+    prefix: "sport_benefits_curated"
+    action: NONE
